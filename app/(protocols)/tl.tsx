@@ -1,8 +1,10 @@
 import AcceptanceAndConformity from "@/components/protocols/tl/AcceptanceAndConformity";
+import ActivtiesDescription from "@/components/protocols/tl/ActivtiesDescription";
 import EquipmentData from "@/components/protocols/tl/EquipmentData";
 import ExecutionData from "@/components/protocols/tl/ExecutionData";
 import GeneralData from "@/components/protocols/tl/GeneralData";
 import MeasurementAndEnvironment from "@/components/protocols/tl/MeasurementAndEnvironment";
+import PhotographicRecord from "@/components/protocols/tl/photographicRecord";
 import SectionControls from "@/components/protocols/tl/SectionControls";
 import TransferData from "@/components/protocols/tl/TransferData";
 import Validation from "@/components/protocols/tl/Validation";
@@ -95,6 +97,15 @@ type AcceptanceAndConformityData = {
   comments?: string;
 };
 
+type ActivitiesAndDescriptionData = {
+  comments?: string;
+};
+
+type PhotoRecord = {
+  name?: string;
+  base64?: string;
+};
+
 type ValidationData = {
   technicalLeader?: {
     signature?: string;
@@ -120,6 +131,11 @@ export default function TLScreen() {
     useState<MeasurementAndEnvironmentData>({});
   const [acceptanceAndConformityData, setAcceptanceAndConformityData] =
     useState<AcceptanceAndConformityData>({});
+  const [activitiesDescriptionData, setActivitiesDescriptionData] =
+    useState<ActivitiesAndDescriptionData>({});
+  const [photographicRecordData, setPhotographicRecordData] = useState<
+    PhotoRecord[]
+  >([]);
   const [validationData, setValidationData] = useState<ValidationData>({});
 
   const sections = [
@@ -170,6 +186,18 @@ export default function TLScreen() {
         setAcceptanceAndConformityData((prev) => ({ ...prev, ...data }))
       }
     />,
+    <ActivtiesDescription
+      key="activities-description-data"
+      data={activitiesDescriptionData}
+      onUpdate={(data: Partial<ActivitiesAndDescriptionData>) =>
+        setActivitiesDescriptionData((prev) => ({ ...prev, ...data }))
+      }
+    />,
+    <PhotographicRecord
+      key="photographic-record-data"
+      data={photographicRecordData}
+      onUpdate={(data: PhotoRecord[]) => setPhotographicRecordData(data)}
+    />,
     <Validation
       key="validation-data"
       data={validationData}
@@ -189,16 +217,15 @@ export default function TLScreen() {
       executionData,
       measurementAndEnvironmentData,
       acceptanceAndConformityData,
+      activitiesDescriptionData,
+      photographicRecordData,
       validationData,
     };
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
         {sections[currentSection]}
         <SectionControls
           currentSection={currentSection}

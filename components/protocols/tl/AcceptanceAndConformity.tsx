@@ -39,7 +39,6 @@ export default function AcceptanceAndConformity({ data, onUpdate }: AcceptanceAn
   );
 }
 
-// Componente Checkbox
 interface CheckboxProps {
   label: string;
   checked: boolean;

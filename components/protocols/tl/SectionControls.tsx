@@ -1,21 +1,21 @@
-import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet, Alert } from "react-native";
 import * as Print from "expo-print";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import * as MediaLibrary from "expo-media-library";
 import { translateKey } from "@/constants/TranslateKey";
 
+import pdfMake from "pdfmake/build/pdfmake";
+import pdfFonts from "pdfmake/build/vfs_fonts";
+import { PhotoRecord } from "./photographicRecord";
+
+pdfMake.vfs = pdfFonts.vfs;
+
 interface SectionControlsProps {
   currentSection: number;
   totalSections: number;
   onChangeSection: (newSection: number) => void;
-  formData: Record<string, unknown>;
+  formData: Record<string, any>;
 }
 
 export default function SectionControls({
@@ -27,10 +27,81 @@ export default function SectionControls({
   const canGoForward = currentSection < totalSections - 1;
   const canGoBack = currentSection > 0;
 
+  // Función para formatear valores
+  const formatValue = (value: unknown) => {
+    if (typeof value === "object" && value !== null) {
+      if (Array.isArray(value)) {
+        return value
+          .map((item, index) => {
+            if (typeof item === "object" && item !== null) {
+              return Object.entries(item)
+                .map(([subKey, subValue]) => {
+                  if (
+                    (subKey === "signature" || subKey === "base64") &&
+                    typeof subValue === "string"
+                  ) {
+                    return `<strong>${translateKey(
+                      subKey
+                    )}:</strong> <img class="signature-img" src="${subValue}" />`;
+                  }
+                  // Formatear fechas
+                  if (
+                    subKey === "date" ||
+                    subKey === "departureTime" ||
+                    subKey === "arrivalTime" ||
+                    subKey === "startTime" ||
+                    subKey === "endTime"
+                  ) {
+                    return `<strong>${translateKey(
+                      subKey
+                    )}:</strong> ${formatDate(subValue as any)}`;
+                  }
+                  // Traducir solo la clave, no el valor
+                  return `<strong>${translateKey(
+                    subKey
+                  )}:</strong> ${subValue}`;
+                })
+                .join("<br>");
+            }
+            return `<strong>${index + 1}:</strong> ${item}`; 
+          })
+          .join("<br>");
+      } else {
+        return Object.entries(value)
+          .map(([subKey, subValue]) => {
+            if ((subKey === "signature" && typeof subValue === "string") || (subKey === "base64" && typeof subValue === "string")) {
+              return `<strong>${translateKey(
+                subKey
+              )}:</strong> <img class="signature-img" src="${subValue}" />`;
+            }
+            // Formatear fechas
+            if (
+              subKey === "date" ||
+              subKey === "departureTime" ||
+              subKey === "arrivalTime" ||
+              subKey === "startTime" ||
+              subKey === "endTime"
+            ) {
+              return `<strong>${translateKey(
+                subKey
+              )}:</strong> ${formatDate(subValue as any)}`;
+            }
+            // Traducir solo la clave, no el valor
+            return `<strong>${translateKey(subKey)}:</strong> ${subValue}`;
+          })
+          .join("<br>");
+      }
+    }
+    // Convertir true/false a Sí/No
+    if (value === true) return "Sí";
+    if (value === false) return "No";
+    return String(value);
+  };
+
   const formatDate = (dateString: string, getJustDate?: boolean) => {
     const date = new Date(dateString);
     const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0"); 
+    const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, "0");
     const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -45,6 +116,7 @@ export default function SectionControls({
 
   const generatePDF = async () => {
     try {
+      // Solicitar permisos para almacenamiento
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
@@ -54,78 +126,6 @@ export default function SectionControls({
         return;
       }
 
-      // Función para formatear valores
-      const formatValue = (value: unknown) => {
-        if (typeof value === "object" && value !== null) {
-          if (Array.isArray(value)) {
-            return value
-              .map((item, index) => {
-                if (typeof item === "object" && item !== null) {
-                  return Object.entries(item)
-                    .map(([subKey, subValue]) => {
-                      if (
-                        (subKey === "signature" || subKey === "base64") &&
-                        typeof subValue === "string"
-                      ) {
-                        return `<strong>${translateKey(
-                          subKey
-                        )}:</strong> <img class="signature-img" src="${subValue}" />`;
-                      }
-                      // Formatear fechas
-                      if (
-                        subKey === "date" ||
-                        subKey === "departureTime" ||
-                        subKey === "arrivalTime" ||
-                        subKey === "startTime" ||
-                        subKey === "endTime"
-                      ) {
-                        return `<strong>${translateKey(
-                          subKey
-                        )}:</strong> ${formatDate(subValue as any)}`;
-                      }
-                      // Traducir solo la clave, no el valor
-                      return `<strong>${translateKey(
-                        subKey
-                      )}:</strong> ${subValue}`;
-                    })
-                    .join("<br>");
-                }
-                return `<strong>${index + 1}:</strong> ${item}`; 
-              })
-              .join("<br>");
-          } else {
-            return Object.entries(value)
-              .map(([subKey, subValue]) => {
-                if ((subKey === "signature" && typeof subValue === "string") || (subKey === "base64" && typeof subValue === "string")) {
-                  return `<strong>${translateKey(
-                    subKey
-                  )}:</strong> <img class="signature-img" src="${subValue}" />`;
-                }
-                // Formatear fechas
-                if (
-                  subKey === "date" ||
-                  subKey === "departureTime" ||
-                  subKey === "arrivalTime" ||
-                  subKey === "startTime" ||
-                  subKey === "endTime"
-                ) {
-                  return `<strong>${translateKey(
-                    subKey
-                  )}:</strong> ${formatDate(subValue as any)}`;
-                }
-                // Traducir solo la clave, no el valor
-                return `<strong>${translateKey(subKey)}:</strong> ${subValue}`;
-              })
-              .join("<br>");
-          }
-        }
-        // Convertir true/false a Sí/No
-        if (value === true) return "Sí";
-        if (value === false) return "No";
-        return String(value);
-      };
-
-      // Crear el contenido HTML del PDF
       const htmlContent = `
         <html>
           <head>
@@ -138,9 +138,16 @@ export default function SectionControls({
               th { background-color: #f5f5f5; font-weight: bold; }
               
               body { 
-              font-family: Arial, sans-serif; 
-              padding: 20px;
-              margin-top: 120px; 
+                font-family: Arial, sans-serif; 
+                padding: 20px;
+                margin-top: 120px; 
+              }
+
+            @page {
+              margin-top: 70px; 
+              margin-bottom: 20px;
+              margin-left: 20px;
+              margin-right: 20px;
             }
 
             .header {
@@ -388,7 +395,7 @@ export default function SectionControls({
         </html>
       `;
 
-      // Generar el PDF
+        // Generar el PDF
       const { uri } = await Print.printToFileAsync({
         html: htmlContent,
         base64: false,
@@ -412,10 +419,7 @@ export default function SectionControls({
         dialogTitle: "Compartir PDF",
       });
 
-      // Mostrar alerta con la ruta simplificada
-      Alert.alert("PDF Generado ✅", `Archivo guardado como: ${fileName}`, [
-        { text: "OK" },
-      ]);
+        Alert.alert("PDF Generado ✅", `Archivo guardado como: ${fileName}`);
     } catch (error) {
       console.error("Error al generar el PDF:", error);
       Alert.alert("Error", "No se pudo generar el PDF");

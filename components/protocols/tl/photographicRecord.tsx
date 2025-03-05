@@ -1,7 +1,7 @@
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
-interface PhotoRecord {
+export interface PhotoRecord {
   name? : string;
   base64?: string;
 }
